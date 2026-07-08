@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIME CONTROL — База фиксаций нарушений</title>
+    <!-- Подключение Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js для графиков -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        @media print { .no-print { display: none !important; } .print-full { width: 100% !important; } }
+        
+        select option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            font-weight: 600 !important;
+        }
+
+        input:-webkit-autofill,
+        textarea:-webkit-autofill,
+        select:-webkit-autofill {
+            -webkit-text-fill-color: #0f172a !important;
+            -webkit-box-shadow: 0 0 0px 1000px #f8fafc inset !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- ЭКРАН АВТОРИЗАЦИИ (БЛОКИРОВКА) -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 shadow-2xl text-center relative overflow-hidden">
+            <div class="absolute -top-10 -left-10 w-40 h-40 bg-rose-600/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10">
+                <div class="mx-auto w-16 h-16 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+
+                <h2 class="text-2xl font-black text-white tracking-tight">Вход в систему контроля</h2>
+                <p class="text-sm text-slate-400 mt-2 mb-6">Введите пароль администратора Mazzali или войдите как гость</p>
+
+                <div id="loginError" class="hidden mb-4 p-3 bg-rose-950/50 border border-rose-800 text-rose-400 rounded-xl text-sm font-semibold"></div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-left text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Пароль Администратора</label>
+                        <input type="password" id="loginPassword" placeholder="Введите пароль..." class="bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 rounded-xl p-3.5 w-full text-center focus:ring-2 focus:ring-rose-500 focus:outline-none font-semibold">
+                    </div>
+                    <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-150">
+                        Войти как Администратор
+                    </button>
+                    <div class="relative flex py-1 items-center">
+                        <div class="flex-grow border-t border-slate-800"></div>
+                        <span class="flex-shrink mx-4 text-slate-600 text-xs font-bold uppercase">или</span>
+                        <div class="flex-grow border-t border-slate-800"></div>
+                    </div>
+                    <button type="button" onclick="loginAsGuest()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-3.5 rounded-xl transition duration-150">
+                        Войти как Гость (Просмотр)
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
+    <div id="mainApp" class="hidden flex-col min-h-screen">
+        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 no-print">
+            <div class="max-w-7xl mx-auto px-4 flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-rose-600 text-white p-2.5 rounded-xl shadow-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-lg tracking-tight text-white block sm:inline">TIME CONTROL</span>
+                        <span class="hidden sm:inline-block text-xs text-rose-500 font-semibold uppercase tracking-wider ml-2">Mazzali Дисциплина</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div id="roleBadge" class="px-3 py-1 rounded-full text-xs font-bold border"></div>
+                    <button onclick="handleLogout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl border border-slate-700 transition" title="Выйти">
+                        Выйти
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-8">
+            <!-- Верхняя часть панели -->
+            <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-850 pb-6">
+                <div>
+                    <h1 class="text-3xl font-black text-white tracking-tight">Сводная аналитика опозданий</h1>
+                    <p class="text-sm text-slate-400 mt-1">Панель контроля посещаемости и штрафных санкций сотрудников.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 no-print">
+                    <button onclick="openAddBranchModal()" id="adminBtnAddBranch" class="admin-only hidden bg-slate-850 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-750 transition flex items-center gap-1.5">
+                        ➕ Новый филиал
+                    </button>
+                    <button onclick="openAddRecordModal()" id="adminBtnAddRecord" class="admin-only hidden bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5">
+                        ➕ Добавить фиксацию
+                    </button>
+                </div>
+            </div>
+
+            <!-- Резервные копии и экспорт -->
+            <div class="mb-6 flex flex-wrap gap-2.5 no-print">
+                <button onclick="exportBackup()" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    💾 Экспорт бэкапа
+                </button>
+                <button onclick="document.getElementById('importFile').click()" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    📤 Импорт бэкапа
+                </button>
+                <input type="file" id="importFile" accept=".json" onchange="importBackup(event)" class="hidden">
+                <button onclick="exportToExcel()" class="bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 border border-emerald-800/50 font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    📊 В Excel
+                </button>
+            </div>
+
+            <!-- Раздел Диаграмм -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Опоздания по филиалам -->
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 min-h-[300px] flex flex-col shadow-xl">
+                    <h3 class="font-bold text-base text-white mb-4 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                        Время опозданий по филиалам (минуты)
+                    </h3>
+                    <div class="relative flex-grow"><canvas id="branchChart"></canvas></div>
+                </div>
+
+                <!-- Опоздания по сотрудникам -->
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 min-h-[300px] flex flex-col shadow-xl">
+                    <h3 class="font-bold text-base text-white mb-4 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                        Антирейтинг сотрудников по минутам опоздания
+                    </h3>
+                    <div class="relative flex-grow"><canvas id="employeeChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Суммарные карточки со статистикой -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Инцидентов всего</span>
+                    <span id="statIncidents" class="text-2xl font-black text-white block mt-1">0</span>
+                </div>
+                <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Общее время потерь</span>
+                    <span id="statTotalMinutes" class="text-2xl font-black text-rose-500 block mt-1">0 мин</span>
+                </div>
+                <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Активных филиалов</span>
+                    <span id="statActiveBranches" class="text-2xl font-black text-indigo-400 block mt-1">0</span>
+                </div>
+                <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Штрафы всего</span>
+                    <span id="statFines" class="text-2xl font-black text-amber-500 block mt-1">0%</span>
+                </div>
+            </div>
+
+            <!-- Таблица -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl print-full">
+                <!-- Фильтры и Поиск -->
+                <div class="p-6 border-b border-slate-800 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4 no-print">
+                    <h2 class="font-extrabold text-lg text-white">Реестр зафиксированных опозданий</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full xl:w-auto">
+                        <input type="text" id="filterSearch" oninput="renderTable()" placeholder="Поиск по имени..." class="bg-slate-100 text-slate-900 placeholder-slate-500 text-sm font-bold rounded-xl px-4 py-2.5 border border-slate-300 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500 w-full">
+                        <select id="filterBranch" onchange="renderTable()" class="bg-slate-100 text-slate-900 text-sm font-bold rounded-xl px-4 py-2.5 border border-slate-300 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500 w-full"></select>
+                        
+                        <!-- Фильтры по датам -->
+                        <div class="flex items-center gap-1.5 w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-1">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">С</span>
+                            <input type="date" id="filterDateFrom" onchange="renderTable()" class="bg-transparent text-slate-900 text-xs font-bold focus:outline-none w-full">
+                        </div>
+                        <div class="flex items-center gap-1.5 w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-1">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">По</span>
+                            <input type="date" id="filterDateTo" onchange="renderTable()" class="bg-transparent text-slate-900 text-xs font-bold focus:outline-none w-full">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-800 text-left text-sm" id="mainReportTable">
+                        <thead class="bg-slate-850 text-slate-400 font-bold uppercase tracking-wider text-xs">
+                            <tr>
+                                <th class="px-6 py-4">Дата / Время</th>
+                                <th class="px-6 py-4">Филиал</th>
+                                <th class="px-6 py-4">Сотрудник</th>
+                                <th class="px-6 py-4 text-center">Опоздание</th>
+                                <th class="px-6 py-4">Штраф</th>
+                                <th class="px-6 py-4">Решение / Мера воздействия</th>
+                                <th class="px-6 py-4 text-right no-print">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-800 bg-slate-900/20"></tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="hidden p-12 text-center text-slate-500">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Записи по выбранным параметрам отсутствуют.</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- МОДАЛКА: ЗАПИСЬ (ДОБАВЛЕНИЕ / ПОЛНОЕ РЕДАКТИРОВАНИЕ) -->
+    <div id="modalRecord" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 bg-slate-850 border-b border-slate-800 flex justify-between items-center">
+                <h3 id="modalRecordTitle" class="text-lg font-bold text-white">Добавить фиксацию опоздания</h3>
+                <button type="button" onclick="closeRecordModal()" class="text-slate-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form onsubmit="saveRecord(event)" class="p-6 space-y-4">
+                <input type="hidden" id="recordId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Дата нарушения *</label>
+                        <input type="date" id="recDate" required class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Точное время по камере *</label>
+                        <input type="time" step="1" id="recTime" required class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Имя сотрудника *</label>
+                        <input type="text" id="recName" required placeholder="Например: Сугро" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Филиал нарушения *</label>
+                        <select id="recBranch" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold"></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Опоздание (в минутах) *</label>
+                        <input type="number" id="recDelay" required min="1" placeholder="Например: 15" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Размер штрафа (%)</label>
+                        <input type="number" id="recFine" min="0" max="100" placeholder="Например: 100" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold">
+                    </div>
+                </div>
+
+                <!-- Быстрые шаблоны решений -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Решение / Мера воздействия</label>
+                    <input type="text" id="recPenalty" placeholder="Штраф 100% / Строгое предупреждение" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold">
+                    <div class="flex gap-1.5 mt-1.5">
+                        <button type="button" onclick="setQuickPenalty('Предупреждение', 0)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-700">Предупреждение</button>
+                        <button type="button" onclick="setQuickPenalty('50% Штраф', 50)" class="bg-amber-950/60 hover:bg-amber-900/60 text-amber-400 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-amber-800/50">50% Штраф</button>
+                        <button type="button" onclick="setQuickPenalty('100% Штраф по регламенту', 100)" class="bg-rose-950/60 hover:bg-rose-900/60 text-rose-400 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-rose-800/50">100% Штраф</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Примечание / Комментарий к опозданию</label>
+                    <textarea id="recNotes" placeholder="Например: Опоздал на кассовую смену" rows="2" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold"></textarea>
+                </div>
+
+                <!-- Загрузка фото -->
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-850">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Медиафиксация (Доказательство)</label>
+                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                        <div class="w-20 h-20 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0" id="formEvidencePreview">
+                            <span class="text-[10px] text-slate-600 text-center font-bold">Нет фото</span>
+                        </div>
+                        <div class="flex-grow space-y-2 text-left">
+                            <div class="flex items-center gap-2">
+                                <input type="file" id="recFile" accept="image/*,video/*" onchange="handleFileSelect(event)" class="hidden">
+                                <button type="button" onclick="document.getElementById('recFile').click()" class="bg-slate-850 hover:bg-slate-750 text-slate-200 text-xs px-3 py-2 rounded-lg border border-slate-700 font-bold transition">
+                                    Выбрать медиафайл
+                                </button>
+                                <span id="fileStatus" class="text-xs text-slate-500 italic truncate max-w-[150px]">Не изменен</span>
+                            </div>
+                            <div class="relative">
+                                <span class="text-[10px] text-slate-500 block mb-1">Или укажите прямую ссылку на фото:</span>
+                                <input type="text" id="recEvidenceUrl" oninput="handleUrlInput(this.value)" placeholder="https://ссылка_на_фото.png" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full text-xs font-bold focus:outline-none focus:bg-white">
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="recEvidenceData">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeRecordModal()" class="bg-slate-800 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-750">Отмена</button>
+                    <button type="submit" class="bg-rose-600 px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-700 shadow-lg">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: НОВЫЙ ФИЛИАЛ -->
+    <div id="modalBranch" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="text-lg font-bold text-white">Добавить новый филиал в систему</h3>
+            <input type="text" id="newBranchName" placeholder="Название филиала..." class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:ring-2 focus:ring-rose-500 focus:outline-none font-semibold">
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeBranchModal()" class="bg-slate-800 px-4 py-2 rounded-xl text-sm font-semibold">Отмена</button>
+                <button type="button" onclick="saveNewBranch()" class="bg-indigo-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: ПОДРОБНЫЙ ПРОСМОТР ИНЦИДЕНТА -->
+    <div id="modalView" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 bg-slate-850 border-b border-slate-800 flex justify-between items-center">
+                <h3 id="viewTitle" class="text-lg font-bold text-white">Детальный отчет по инциденту</h3>
+                <button type="button" onclick="closeViewModal()" class="text-slate-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Text Details -->
+                <div class="space-y-3 text-sm text-left">
+                    <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                        <span class="text-xs text-slate-400 font-semibold uppercase">Сотрудник</span>
+                        <span id="viewEmployee" class="text-base font-bold text-white mt-0.5">Имя</span>
+                    </div>
+                    <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                        <span class="text-xs text-slate-400 font-semibold uppercase">Филиал</span>
+                        <span id="viewBranch" class="text-base font-bold text-white mt-0.5">Филиал</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Дата нарушения</span>
+                            <span id="viewDate" class="font-bold text-white">01.01.2026</span>
+                        </div>
+                        <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Время на камере</span>
+                            <span id="viewTime" class="font-bold text-white">00:00:00</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Опоздание</span>
+                            <span id="viewDelay" class="font-bold text-rose-500">0 мин</span>
+                        </div>
+                        <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Примененный штраф</span>
+                            <span id="viewFine" class="font-bold text-amber-500">0%</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                        <span class="text-xs text-slate-400 font-semibold uppercase">Статус / Мера наказания</span>
+                        <span id="viewPenalty" class="font-semibold text-white">Не установлено</span>
+                    </div>
+                    <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
+                        <span class="text-xs text-slate-400 font-semibold uppercase">Комментарий к записи</span>
+                        <span id="viewNotes" class="text-slate-300">Примечания отсутствуют.</span>
+                    </div>
+                </div>
+
+                <!-- Video / Photo Container -->
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Кадр с камеры видеофиксации</span>
+                    <div id="mediaContainer" class="flex-grow bg-slate-950 border border-slate-850 rounded-2xl relative flex items-center justify-center overflow-hidden min-h-[250px] max-h-[350px] mb-3">
+                        <!-- Dynamic Media Content -->
+                    </div>
+                    <input type="hidden" id="viewIncidentId">
+                    <!-- Улучшение: Идеально чистый рапорт в Telegram БЕЗ лишних символов -->
+                    <button onclick="copyToTelegram()" class="bg-indigo-650 hover:bg-indigo-600 text-white font-bold text-xs py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
+                        📱 Скопировать для Telegram
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-850 border-t border-slate-800 flex justify-between">
+                <span class="text-xs text-slate-500 self-center">Информационный рапорт безопасности</span>
+                <button type="button" onclick="closeViewModal()" class="bg-slate-800 hover:bg-slate-750 text-white font-bold text-sm px-6 py-2 rounded-xl transition">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- СКРИПТЫ СИСТЕМЫ -->
+    <script>
+        const defaultBranches = [
+            "Алгоритм", "Ардус", "Аския", "Максимка", "Беруни", "Бобур", "Бунедкор", 
+            "Ганга", "Кфс", "Кадышево", "Катартал", "Карасу", "Куйлюк", "Махтумкули", 
+            "Мега", "Мирабад", "Нукус", "Ойбек", "Осие", "Паркент", "Платформ", 
+            "Сампи", "Саракулька", "Сергели", "Сити", "Старт", "Фархадский", "Ц1", 
+            "Ц5", "Ц6", "Цум", "Чиланзар", "Шевченко", "Школа", "Шота", "Эко", 
+            "Юа", "Туркистон", "Офис 1", "Склад 1", "Офис для Менеджмента"
+        ];
+
+        const defaultRecords = [
+            { id: "1", date: "2026-07-01", time: "10:06:03", name: "Сугро", branch: "Офис 1", delay: 6, fine: 0, penalty: "Первое предупреждение", notes: "Сотрудник зафиксирован на рабочем месте в наушниках с чашкой.", evidence: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80" },
+            { id: "2", date: "2026-07-02", time: "10:13:42", name: "Мария", branch: "Склад 1", delay: 13, fine: 0, penalty: "Замечание", notes: "Зафиксирована у входа, изучает телефон при входе на склад.", evidence: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80" },
+            { id: "3", date: "2026-07-06", time: "10:17:48", name: "Сугро", branch: "Офис 1", delay: 14, fine: 0, penalty: "Повторно предупрежден", notes: "Второй инцидент за неделю. Проведена беседа о времени начала смены.", evidence: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=600&q=80" },
+            { id: "4", date: "2026-07-07", time: "10:20:46", name: "Мария", branch: "Офис для Менеджмента", delay: 20, fine: 0, penalty: "Замечание", notes: "Зафиксирована входящей в кабинет управления менеджмента.", evidence: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80" },
+            { id: "5", date: "2026-07-07", time: "10:26:00", name: "Сугро", branch: "Офис 1", delay: 26, fine: 0, penalty: "Систематически / Депремирование", notes: "Третий факт опоздания за месяц. Рапорт отправлен руководству.", evidence: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80" },
+            { id: "6", date: "2026-07-08", time: "09:31:14", name: "Хайдар", branch: "Ц5", delay: 30, fine: 100, penalty: "100% штраф по регламенту касс", notes: "Грубое опоздание на открытие кассовой смены, касса №3.", evidence: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80" }
+        ];
+
+        let branches = JSON.parse(localStorage.getItem('tb_branches')) || defaultBranches;
+        let records = JSON.parse(localStorage.getItem('tb_records')) || defaultRecords;
+
+        let currentRole = null;
+        let branchChartInstance = null;
+        let employeeChartInstance = null;
+
+        window.onload = function() {
+            // Инициализация Telegram Mini App
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand(); // Разворачиваем на весь экран
+            }
+
+            const savedRole = localStorage.getItem('tb_saved_role');
+            if (savedRole) { 
+                applyRole(savedRole); 
+            }
+        }
+
+        // Авторизация
+        function handleLogin(e) {
+            e.preventDefault();
+            const errorDiv = document.getElementById('loginError');
+            const passwordInput = document.getElementById('loginPassword').value.trim().toLowerCase();
+
+            if (passwordInput === 'rustam.7077') {
+                errorDiv.classList.add('hidden');
+                applyRole('admin');
+                showToast("Вход выполнен. Права Администратора подтверждены", "success");
+            } else {
+                errorDiv.innerText = "Ошибка: неверный пароль. Попробуйте сменить раскладку на английский язык.";
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        function loginAsGuest() { 
+            applyRole('guest'); 
+            showToast("Вход выполнен как Гость (режим просмотра)", "info");
+        }
+
+        function applyRole(role) {
+            currentRole = role;
+            localStorage.setItem('tb_saved_role', role);
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+
+            const badge = document.getElementById('roleBadge');
+            const adminElements = document.querySelectorAll('.admin-only');
+
+            if (role === 'admin') {
+                badge.className = "bg-rose-950/50 text-rose-400 border border-rose-800/50 px-3 py-1 rounded-full text-xs font-bold";
+                badge.innerText = "Администратор";
+                adminElements.forEach(el => el.classList.remove('hidden'));
+            } else {
+                badge.className = "bg-indigo-950/50 text-indigo-400 border border-indigo-800/50 px-3 py-1 rounded-full text-xs font-bold";
+                badge.innerText = "Гость (Просмотр)";
+                adminElements.forEach(el => el.classList.add('hidden'));
+            }
+
+            populateFilters();
+            renderTable();
+            renderCharts();
+        }
+
+        function handleLogout() {
+            currentRole = null;
+            localStorage.removeItem('tb_saved_role');
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+            showToast("Сессия закрыта", "info");
+        }
+
+        // Заполнение выпадающих списков филиалов с принудительным цветом
+        function populateFilters() {
+            const fBranch = document.getElementById('filterBranch');
+            const rBranch = document.getElementById('recBranch');
+            fBranch.innerHTML = '<option value="all" style="background-color: #ffffff; color: #0f172a; font-weight: bold;">Все филиалы</option>';
+            rBranch.innerHTML = '';
+            
+            // Сортировка филиалов по алфавиту
+            branches.sort((a,b) => a.localeCompare(b)).forEach(b => {
+                const opt1 = document.createElement('option');
+                opt1.value = b;
+                opt1.innerText = b;
+                opt1.style.backgroundColor = "#ffffff";
+                opt1.style.color = "#0f172a";
+                opt1.style.fontWeight = "bold";
+                fBranch.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = b;
+                opt2.innerText = b;
+                opt2.style.backgroundColor = "#ffffff";
+                opt2.style.color = "#0f172a";
+                opt2.style.fontWeight = "bold";
+                rBranch.appendChild(opt2);
+            });
+        }
+
+        // Улучшение: Быстрые кнопки шаблонов
+        function setQuickPenalty(text, val) {
+            document.getElementById('recPenalty').value = text;
+            document.getElementById('recFine').value = val;
+        }
+
+        // Отрисовка таблицы с учетом фильтров по датам
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            const search = document.getElementById('filterSearch').value.toLowerCase();
+            const branch = document.getElementById('filterBranch').value;
+            
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+
+            tbody.innerHTML = '';
+
+            const sorted = [...records].sort((a,b) => b.id.toString().localeCompare(a.id.toString()));
+
+            const filtered = sorted.filter(r => {
+                const matchesSearch = r.name.toLowerCase().includes(search);
+                const matchesBranch = (branch === 'all' || r.branch === branch);
+                
+                // Фильтр по дате
+                let matchesDate = true;
+                const rDate = parseToInputDate(r.date); // Приводим к YYYY-MM-DD
+                if (dateFrom && rDate < dateFrom) matchesDate = false;
+                if (dateTo && rDate > dateTo) matchesDate = false;
+
+                return matchesSearch && matchesBranch && matchesDate;
+            });
+            
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(r => {
+                    const formattedDate = formatRussianDate(r.date);
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-800/40 transition cursor-pointer" onclick="viewIncident('${r.id}')">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="font-bold text-white block">${formattedDate}</span>
+                                <span class="text-xs text-slate-500">${r.time}</span>
+                            </td>
+                            <td class="px-6 py-4 text-slate-300 whitespace-nowrap">${r.branch}</td>
+                            <td class="px-6 py-4 font-bold text-white whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="h-7 w-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[10px] uppercase border border-slate-700">
+                                        ${r.name.substring(0, 2)}
+                                    </div>
+                                    <span class="ml-2">${r.name}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <span class="px-2 py-1 rounded-full text-xs font-bold ${r.delay >= 25 ? 'bg-rose-950/70 text-rose-400 border border-rose-800/50' : 'bg-amber-950/50 text-amber-400 border border-amber-800/50'}">
+                                    ${r.delay} мин
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                ${r.fine > 0 ? `<span class="text-amber-500 font-extrabold">${r.fine}% штраф</span>` : '<span class="text-slate-500">—</span>'}
+                            </td>
+                            <td class="px-6 py-4 text-slate-300 max-w-[200px] truncate">
+                                <span class="font-semibold block text-slate-100">${r.penalty || 'Фиксация нарушения'}</span>
+                                <span class="text-xs text-slate-500 block truncate">${r.notes || ''}</span>
+                            </td>
+                            <td class="px-6 py-4 text-right no-print whitespace-nowrap" onclick="event.stopPropagation()">
+                                ${currentRole === 'admin' ? `
+                                    <div class="flex justify-end gap-3">
+                                        <button onclick="editRecord('${r.id}')" class="text-indigo-400 hover:text-indigo-300 font-bold text-xs flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            Изменить
+                                        </button>
+                                        <button onclick="deleteRecord('${r.id}')" class="text-rose-500 hover:text-rose-400 font-bold text-xs flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            Удалить
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <button onclick="viewIncident('${r.id}')" class="text-indigo-400 hover:underline text-xs font-bold">Подробнее</button>
+                                `}
+                            </td>
+                        </tr>`;
+                });
+            }
+
+            // Статистика по отфильтрованному периоду
+            document.getElementById('statIncidents').innerText = filtered.length;
+            const totalMinutes = filtered.reduce((sum, r) => sum + parseInt(r.delay || 0), 0);
+            document.getElementById('statTotalMinutes').innerText = totalMinutes + " мин";
+            const activeBranchesSet = new Set(filtered.map(r => r.branch));
+            document.getElementById('statActiveBranches').innerText = activeBranchesSet.size;
+            const totalFines = filtered.reduce((sum, r) => sum + (r.fine ? parseInt(r.fine) : 0), 0);
+            document.getElementById('statFines').innerText = totalFines + "%";
+
+            // Перерисовываем графики для динамического соответствия фильтрам
+            updateDynamicCharts(filtered);
+        }
+
+        // Обновление диаграмм на основе текущего фильтра данных
+        function updateDynamicCharts(filteredData) {
+            const bMap = {}, eMap = {};
+            filteredData.forEach(r => {
+                bMap[r.branch] = (bMap[r.branch] || 0) + parseInt(r.delay);
+                eMap[r.name] = (eMap[r.name] || 0) + parseInt(r.delay);
+            });
+
+            const sortedBranches = Object.entries(bMap).sort((a,b) => b[1] - a[1]).slice(0, 6);
+            const branchLabels = sortedBranches.map(x => x[0]);
+            const branchData = sortedBranches.map(x => x[1]);
+
+            if(branchChartInstance) branchChartInstance.destroy();
+            branchChartInstance = new Chart(document.getElementById('branchChart'), {
+                type: 'bar',
+                data: {
+                    labels: branchLabels.length ? branchLabels : ["Нет данных"],
+                    datasets: [{ 
+                        label: 'Минуты опозданий',
+                        data: branchData.length ? branchData : [0], 
+                        backgroundColor: 'rgba(99, 102, 241, 0.65)', 
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        borderRadius: 6 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(148, 163, 184, 0.05)' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: 'rgba(148, 163, 184, 0.05)' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            const sortedEmployees = Object.entries(eMap).sort((a,b) => b[1] - a[1]);
+            const employeeLabels = sortedEmployees.map(x => x[0]);
+            const employeeData = sortedEmployees.map(x => x[1]);
+
+            if(employeeChartInstance) employeeChartInstance.destroy();
+            employeeChartInstance = new Chart(document.getElementById('employeeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: employeeLabels.length ? employeeLabels : ["Нет данных"],
+                    datasets: [{ 
+                        data: employeeData.length ? employeeData : [1], 
+                        backgroundColor: ['#f43f5e','#fb923c','#fbbf24','#34d399','#22d3ee','#818cf8','#a78bfa'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Построение дефолтных графиков
+        function renderCharts() {
+            renderTable();
+        }
+
+        // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ КОНВЕРТАЦИИ ДАТЫ И ВРЕМЕНИ ДЛЯ INPUT-ПОЛЕЙ
+        function parseToInputDate(dateStr) {
+            if (!dateStr) return "";
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            const parts = dateStr.split('.');
+            if (parts.length === 3) {
+                const d = parts[0].padStart(2, '0');
+                const m = parts[1].padStart(2, '0');
+                const y = parts[2];
+                return `${y}-${m}-${d}`;
+            }
+            return "";
+        }
+
+        function parseToInputTime(timeStr) {
+            if (!timeStr) return "00:00:00";
+            const parts = timeStr.split(':');
+            if (parts.length >= 2) {
+                const hh = parts[0].padStart(2, '0');
+                const mm = parts[1].padStart(2, '0');
+                const ss = parts[2] ? parts[2].padStart(2, '0') : "00";
+                return `${hh}:${mm}:${ss}`;
+            }
+            return "00:00:00";
+        }
+
+        function formatRussianDate(dateStr) {
+            if (!dateStr) return "";
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                const parts = dateStr.split('-');
+                return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        // ЭКСПОРТ БЭКАПА ДАННЫХ (JSON ФАЙЛ)
+        function exportBackup() {
+            const dataStr = JSON.stringify({ branches, records });
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `mazzali_timecontrol_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            showToast("Бэкап базы данных успешно сохранен на ПК!", "success");
+        }
+
+        // ИМПОРТ БЭКАПА ДАННЫХ
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.branches && data.records) {
+                        branches = data.branches;
+                        records = data.records;
+                        localStorage.setItem('tb_branches', JSON.stringify(branches));
+                        localStorage.setItem('tb_records', JSON.stringify(records));
+                        populateFilters();
+                        renderTable();
+                        renderCharts();
+                        showToast("Резервная копия успешно загружена на ПК!", "success");
+                    } else {
+                        showToast("Неверный формат файла бэкапа!", "error");
+                    }
+                } catch (err) {
+                    showToast("Не удалось прочитать файл!", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ЭКСПОРТ В EXCEL (CSV)
+        function exportToExcel() {
+            let csvContent = "\uFEFF"; // BOM для правильной кодировки кириллицы в Excel
+            csvContent += "Дата;Время;Филиал;Сотрудник;Опоздание (мин);Штраф %;Решение\n";
+
+            records.forEach(r => {
+                csvContent += `${formatRussianDate(r.date)};${r.time};${r.branch};${r.name};${r.delay};${r.fine || 0};${r.penalty || "Фиксация"}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `mazzali_discipline_report_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            showToast("Файл отчета для Excel успешно скачан!", "success");
+        }
+
+        // КОПИРОВАНИЕ РАПОРТА ДЛЯ TELEGRAM (ЧИСТЫЙ ТЕКСТ БЕЗ ШУМА)
+        function copyToTelegram() {
+            const id = document.getElementById('viewIncidentId').value;
+            const r = records.find(x => x.id.toString() === id.toString());
+            if (!r) return;
+
+            const formattedDate = formatRussianDate(r.date);
+            const formattedTime = r.time ? r.time.substring(0, 5) : "";
+            
+            // Полностью чистый, аккуратный текст рапорта для отправки в один клик
+            const text = `⚠️ ОПАЗДАНИЕ СОТРУДНИКА\n\n` +
+                         `Филиал: ${r.branch}\n` +
+                         `Сотрудник: ${r.name}\n` +
+                         `Дата и время: ${formattedDate} в ${formattedTime}\n\n` +
+                         `Время опоздания: ${r.delay} мин\n` +
+                         `Размер штрафа: ${r.fine > 0 ? r.fine + '%' : 'Нет'}\n` +
+                         `Решение: ${r.penalty || 'Зарегистрировано системой'}\n\n` +
+                         `Комментарий: ${r.notes || 'Без примечаний.'}`;
+
+            // Копирование в буфер обмена
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast("📱 Рапорт скопирован! Теперь просто нажмите Ctrl+V в Telegram.", "success");
+        }
+
+        // МОДАЛКА: ОТКРЫТИЕ НА ДОБАВЛЕНИЕ
+        function openAddRecordModal() {
+            document.getElementById('modalRecordTitle').innerText = "Добавить новую фиксацию опоздания";
+            document.getElementById('recordId').value = "";
+            document.getElementById('recDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('recTime').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
+            document.getElementById('recName').value = "";
+            document.getElementById('recDelay').value = "";
+            document.getElementById('recFine').value = "";
+            document.getElementById('recPenalty').value = "";
+            document.getElementById('recNotes').value = "";
+            document.getElementById('recEvidenceData').value = "";
+            document.getElementById('recEvidenceUrl').value = "";
+            document.getElementById('fileStatus').innerText = "Файл не выбран";
+            updateEvidencePreview("");
+
+            document.getElementById('modalRecord').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+        }
+
+        function closeRecordModal() { 
+            document.getElementById('modalRecord').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4"; 
+        }
+        
+        function openAddBranchModal() { 
+            document.getElementById('newBranchName').value = "";
+            document.getElementById('modalBranch').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"; 
+        }
+
+        function closeBranchModal() { 
+            document.getElementById('modalBranch').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4"; 
+        }
+
+        // РЕДАКТИРОВАНИЕ СТАРОГО НАРУШЕНИЯ
+        function editRecord(id) {
+            const r = records.find(x => x.id.toString() === id.toString());
+            if (!r) {
+                showToast("Ошибка: Запись не найдена в базе ПК!", "error");
+                return;
+            }
+
+            document.getElementById('modalRecordTitle').innerText = "Редактировать фиксацию опоздания";
+            document.getElementById('recordId').value = r.id;
+
+            document.getElementById('recDate').value = parseToInputDate(r.date);
+            document.getElementById('recTime').value = parseToInputTime(r.time);
+            
+            document.getElementById('recName').value = r.name || "";
+            document.getElementById('recBranch').value = r.branch || "";
+            document.getElementById('recDelay').value = r.delay || "";
+            document.getElementById('recFine').value = (r.fine !== undefined && r.fine !== null) ? r.fine : "";
+            document.getElementById('recPenalty').value = r.penalty || "";
+            document.getElementById('recNotes').value = r.notes || "";
+            
+            if (r.evidence && r.evidence.startsWith('http')) {
+                document.getElementById('recEvidenceUrl').value = r.evidence;
+                document.getElementById('recEvidenceData').value = "";
+            } else {
+                document.getElementById('recEvidenceUrl').value = "";
+                document.getElementById('recEvidenceData').value = r.evidence || "";
+            }
+
+            document.getElementById('fileStatus').innerText = r.evidence ? "Медиафайл загружен" : "Нет медиафайла";
+            updateEvidencePreview(r.evidence);
+
+            document.getElementById('modalRecord').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+        }
+
+        // СОХРАНЕНИЕ / ИЗМЕНЕНИЕ ЗАПИСИ
+        function saveRecord(e) {
+            e.preventDefault();
+            const id = document.getElementById('recordId').value;
+            const date = document.getElementById('recDate').value;
+            const time = document.getElementById('recTime').value;
+            const name = document.getElementById('recName').value.trim();
+            const branch = document.getElementById('recBranch').value;
+            const delay = parseInt(document.getElementById('recDelay').value);
+            const fine = parseInt(document.getElementById('recFine').value) || 0;
+            const penalty = document.getElementById('recPenalty').value.trim();
+            const notes = document.getElementById('recNotes').value.trim();
+            
+            let evidence = document.getElementById('recEvidenceData').value.trim();
+            if (!evidence) {
+                evidence = document.getElementById('recEvidenceUrl').value.trim();
+            }
+
+            if (!evidence) {
+                evidence = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=600&q=80";
+            }
+
+            if (id) {
+                const idx = records.findIndex(r => r.id.toString() === id.toString());
+                if (idx !== -1) {
+                    records[idx] = { id: id.toString(), date, time, name, branch, delay, fine, penalty, notes, evidence };
+                    showToast("Фиксация успешно изменена!", "success");
+                }
+            } else {
+                const newRec = {
+                    id: Date.now().toString(),
+                    date, time, name, branch, delay, fine, penalty, notes, evidence
+                };
+                records.push(newRec);
+                showToast("Новая фиксация добавлена!", "success");
+            }
+
+            localStorage.setItem('tb_records', JSON.stringify(records));
+            closeRecordModal();
+            renderTable();
+        }
+
+        // Удаление
+        function deleteRecord(id) {
+            if(!confirm("Вы уверены, что хотите навсегда удалить эту фиксацию?")) return;
+            records = records.filter(r => r.id.toString() !== id.toString());
+            localStorage.setItem('tb_records', JSON.stringify(records));
+            renderTable();
+            showToast("Запись нарушения удалена", "info");
+        }
+
+        // Добавление нового филиала
+        function saveNewBranch() {
+            const name = document.getElementById('newBranchName').value.trim();
+            if(!name) return;
+            if(branches.includes(name)) {
+                showToast("Этот филиал уже есть в списке!", "error");
+                return;
+            }
+            branches.push(name);
+            localStorage.setItem('tb_branches', JSON.stringify(branches));
+            populateFilters();
+            closeBranchModal();
+            showToast(`Филиал "${name}" успешно создан!`, "success");
+        }
+
+        // Загрузка фото/видео в Base64
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileStatus').innerText = file.name;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                document.getElementById('recEvidenceData').value = base64Data;
+                document.getElementById('recEvidenceUrl').value = "";
+                updateEvidencePreview(base64Data);
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // Ввод прямой ссылки на фото
+        function handleUrlInput(val) {
+            if(val.trim().startsWith('http')) {
+                document.getElementById('recEvidenceData').value = "";
+                updateEvidencePreview(val.trim());
+            }
+        }
+
+        // Превью фото
+        function updateEvidencePreview(src) {
+            const previewDiv = document.getElementById('formEvidencePreview');
+            previewDiv.innerHTML = '';
+            if (src) {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = "w-full h-full object-cover";
+                previewDiv.appendChild(img);
+            } else {
+                previewDiv.innerHTML = '<span class="text-[10px] text-slate-600 text-center font-bold">Нет фото</span>';
+            }
+        }
+
+        // ДЕТАЛЬНЫЙ ПРОСМОТР ИНЦИДЕНТА
+        function viewIncident(id) {
+            const r = records.find(x => x.id.toString() === id.toString());
+            if (!r) return;
+
+            document.getElementById('viewIncidentId').value = r.id; // сохраняем id для копирования
+
+            document.getElementById('viewEmployee').innerText = r.name;
+            document.getElementById('viewBranch').innerText = r.branch;
+            document.getElementById('viewDate').innerText = formatRussianDate(r.date);
+            document.getElementById('viewTime').innerText = r.time;
+            document.getElementById('viewDelay').innerText = r.delay + " минут";
+            document.getElementById('viewFine').innerText = r.fine > 0 ? r.fine + "%" : "Не выставлен";
+            document.getElementById('viewPenalty').innerText = r.penalty || "Зарегистрировано системой";
+            document.getElementById('viewNotes').innerText = r.notes || "Примечания и подробности отсутствуют.";
+
+            const container = document.getElementById('mediaContainer');
+            container.innerHTML = '';
+
+            if (r.evidence) {
+                if (r.evidence.startsWith('data:video/') || r.evidence.includes('.mp4')) {
+                    const video = document.createElement('video');
+                    video.src = r.evidence;
+                    video.controls = true;
+                    video.className = "w-full h-full object-cover rounded-xl";
+                    container.appendChild(video);
+                } else {
+                    const img = document.createElement('img');
+                    img.src = r.evidence;
+                    img.alt = `Фиксация: ${r.name}`;
+                    img.className = "w-full h-full object-cover rounded-xl";
+                    img.onerror = function() {
+                        this.src = "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80";
+                    };
+                    container.appendChild(img);
+                }
+            } else {
+                container.innerHTML = `
+                    <div class="text-slate-600 text-center text-xs p-4">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span>Кадр подтверждения отсутствует</span>
+                    </div>
+                `;
+            }
+
+            document.getElementById('modalView').className = "fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+        }
+
+        function closeViewModal() {
+            document.getElementById('modalView').className = "fixed inset-0 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center z-50 p-4";
+        }
+
+        // ВСПОМОГАТЕЛЬНЫЕ TOASTS ОПОВЕЩЕНИЯ
+        function showToast(message, type = "success") {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl font-bold text-sm shadow-xl transition-all duration-300 transform translate-y-10 opacity-0`;
+            
+            if (type === 'success') {
+                toast.className += ' bg-emerald-600 text-white shadow-emerald-900/20';
+            } else if (type === 'error') {
+                toast.className += ' bg-rose-600 text-white shadow-rose-900/20';
+            } else {
+                toast.className += ' bg-slate-800 text-slate-200 border border-slate-700';
+            }
+
+            toast.innerText = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
