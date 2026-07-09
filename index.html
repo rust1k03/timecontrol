@@ -89,7 +89,13 @@
                         <span class="hidden sm:inline-block text-xs text-rose-500 font-semibold uppercase tracking-wider ml-2">Mazzali Дисциплина</span>
                     </div>
                 </div>
+                
                 <div class="flex items-center space-x-3">
+                    <!-- Статус подключения к Firebase -->
+                    <div id="dbStatusBadge" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                        <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-gray-500"></span>
+                        <span id="dbStatusText">Firebase: Офлайн</span>
+                    </div>
                     <div id="roleBadge" class="px-3 py-1 rounded-full text-xs font-bold border"></div>
                     <button onclick="handleLogout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl border border-slate-700 transition" title="Выйти">
                         Выйти
@@ -102,8 +108,8 @@
             <!-- Верхняя часть панели -->
             <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-850 pb-6">
                 <div>
-                    <h1 class="text-3xl font-black text-white tracking-tight">Сводная аналитика опозданий</h1>
-                    <p class="text-sm text-slate-400 mt-1">Панель контроля посещаемости и штрафных санкций сотрудников.</p>
+                    <h1 class="text-3xl font-black text-white tracking-tight">Сводная аналитика нарушений</h1>
+                    <p class="text-sm text-slate-400 mt-1">Панель контроля дисциплины, посещаемости и штрафных санкций Mazzali.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 no-print">
                     <button onclick="openAddBranchModal()" id="adminBtnAddBranch" class="admin-only hidden bg-slate-850 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-750 transition flex items-center gap-1.5">
@@ -140,7 +146,7 @@
                     <div class="relative flex-grow"><canvas id="branchChart"></canvas></div>
                 </div>
 
-                <!-- Опоздания по сотрудникам -->
+                <!-- Нарушения по сотрудникам -->
                 <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 min-h-[300px] flex flex-col shadow-xl">
                     <h3 class="font-bold text-base text-white mb-4 flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
@@ -174,7 +180,7 @@
             <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl print-full">
                 <!-- Фильтры и Поиск -->
                 <div class="p-6 border-b border-slate-800 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4 no-print">
-                    <h2 class="font-extrabold text-lg text-white">Реестр зафиксированных опозданий</h2>
+                    <h2 class="font-extrabold text-lg text-white">Реестр зафиксированных нарушений</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full xl:w-auto">
                         <input type="text" id="filterSearch" oninput="renderTable()" placeholder="Поиск по имени..." class="bg-slate-100 text-slate-900 placeholder-slate-500 text-sm font-bold rounded-xl px-4 py-2.5 border border-slate-300 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500 w-full">
                         <select id="filterBranch" onchange="renderTable()" class="bg-slate-100 text-slate-900 text-sm font-bold rounded-xl px-4 py-2.5 border border-slate-300 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500 w-full"></select>
@@ -198,7 +204,7 @@
                                 <th class="px-6 py-4">Дата / Время</th>
                                 <th class="px-6 py-4">Филиал</th>
                                 <th class="px-6 py-4">Сотрудник</th>
-                                <th class="px-6 py-4 text-center">Опоздание</th>
+                                <th class="px-6 py-4 text-center">Вид нарушения / Опоздание</th>
                                 <th class="px-6 py-4">Штраф</th>
                                 <th class="px-6 py-4">Решение / Мера воздействия</th>
                                 <th class="px-6 py-4 text-right no-print">Действия</th>
@@ -209,7 +215,7 @@
                 </div>
                 <div id="emptyState" class="hidden p-12 text-center text-slate-500">
                     <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>Записи по выбранным параметрам отсутствуют.</span>
+                    <span>Записи по выбранным параметров отсутствуют.</span>
                 </div>
             </div>
         </main>
@@ -219,7 +225,7 @@
     <div id="modalRecord" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl">
             <div class="px-6 py-4 bg-slate-850 border-b border-slate-800 flex justify-between items-center">
-                <h3 id="modalRecordTitle" class="text-lg font-bold text-white">Добавить фиксацию опоздания</h3>
+                <h3 id="modalRecordTitle" class="text-lg font-bold text-white">Добавить фиксацию нарушения</h3>
                 <button type="button" onclick="closeRecordModal()" class="text-slate-400 hover:text-white transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
@@ -246,11 +252,30 @@
                         <select id="recBranch" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold"></select>
                     </div>
                 </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">Вид нарушения *</label>
+                        <select id="recType" onchange="toggleLatenessInput()" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold">
+                            <option value="lateness" selected>Опоздание (в минутах)</option>
+                            <option value="dress_code">Нарушение дресс-кода</option>
+                            <option value="discipline">Нарушение дисциплины</option>
+                            <option value="negligence">Халатность / Невыполнение обязанностей</option>
+                            <option value="theft">Кража / Хищение</option>
+                            <option value="damage">Порча имущества</option>
+                            <option value="rudeness">Грубое отношение</option>
+                            <option value="absence">Прогул / Отсутствие на рабочем месте</option>
+                            <option value="other">Другое нарушение</option>
+                        </select>
+                    </div>
+                    <!-- Поле "Опоздание в минутах" скрывается при выборе другого вида нарушения -->
+                    <div id="recDelayContainer">
                         <label class="block text-xs font-bold text-slate-400 mb-1">Опоздание (в минутах) *</label>
                         <input type="number" id="recDelay" required min="1" placeholder="Например: 15" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold">
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-1">Размер штрафа (%)</label>
                         <input type="number" id="recFine" min="0" max="100" placeholder="Например: 100" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-extrabold">
@@ -262,15 +287,15 @@
                     <label class="block text-xs font-bold text-slate-400 mb-1">Решение / Мера воздействия</label>
                     <input type="text" id="recPenalty" placeholder="Штраф 100% / Строгое предупреждение" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold">
                     <div class="flex gap-1.5 mt-1.5">
-                        <button type="button" onclick="setQuickPenalty('Предупреждение', 0)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-700">Предупреждение</button>
+                        <button type="button" onclick="setQuickPenalty('Предупреждение', 0)" class="bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-slate-700">Предупреждение</button>
                         <button type="button" onclick="setQuickPenalty('50% Штраф', 50)" class="bg-amber-950/60 hover:bg-amber-900/60 text-amber-400 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-amber-800/50">50% Штраф</button>
                         <button type="button" onclick="setQuickPenalty('100% Штраф по регламенту', 100)" class="bg-rose-950/60 hover:bg-rose-900/60 text-rose-400 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-rose-800/50">100% Штраф</button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1">Примечание / Комментарий к опозданию</label>
-                    <textarea id="recNotes" placeholder="Например: Опоздал на кассовую смену" rows="2" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold"></textarea>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Примечание / Комментарий к нарушению</label>
+                    <textarea id="recNotes" placeholder="Например: Зафиксировано нарушение правил кассовой дисциплины" rows="2" class="bg-slate-50 border border-slate-300 text-slate-900 rounded-xl p-2.5 w-full focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold"></textarea>
                 </div>
 
                 <!-- Загрузка фото -->
@@ -349,8 +374,8 @@
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
-                            <span class="text-xs text-slate-400 font-semibold uppercase">Опоздание</span>
-                            <span id="viewDelay" class="font-bold text-rose-500">0 мин</span>
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Вид нарушения</span>
+                            <span id="viewType" class="font-bold text-indigo-400">Опоздание</span>
                         </div>
                         <div class="flex flex-col bg-slate-800/80 p-3 rounded-xl border border-slate-750">
                             <span class="text-xs text-slate-400 font-semibold uppercase">Примененный штраф</span>
@@ -387,9 +412,44 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА: ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ -->
+    <div id="modalConfirmDelete" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+            <div class="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-white">Удалить фиксацию?</h3>
+            <p class="text-sm text-slate-400">Вы уверены, что хотите навсегда удалить эту фиксацию нарушения? Это действие нельзя отменить.</p>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeConfirmDeleteModal()" class="w-1/2 bg-slate-800 hover:bg-slate-750 text-slate-300 py-2.5 rounded-xl text-sm font-semibold transition">Отмена</button>
+                <button type="button" onclick="executeDeleteRecord()" class="w-1/2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-sm font-bold transition">Удалить</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- СКРИПТЫ СИСТЕМЫ -->
-    <script>
+    <!-- СКРИПТЫ СИСТЕМЫ С СИНХРОНИЗАЦИЕЙ FIREBASE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // ⚙️ КЛИЕНТСКИЙ HARDCODED FIREBASE CONFIG
+        // ==========================================
+        const hardcodedFirebaseConfig = {
+            apiKey: "AIzaSyAcZBkQRt8-Td9NAG0wPmxuBK0JdQd74XE",
+            authDomain: "mazzali.firebaseapp.com",
+            databaseURL: "https://mazzali-default-rtdb.firebaseio.com",
+            projectId: "mazzali",
+            storageBucket: "mazzali.firebasestorage.app",
+            messagingSenderId: "414108423295",
+            appId: "1:414108423295:web:2096e79909d349a35b5b4a",
+            measurementId: "G-PTTY74HXW7"
+        };
+        // ==========================================
+
         const defaultBranches = [
             "Алгоритм", "Ардус", "Аския", "Максимка", "Беруни", "Бобур", "Бунедкор", 
             "Ганга", "Кфс", "Кадышево", "Катартал", "Карасу", "Куйлюк", "Махтумкули", 
@@ -400,37 +460,190 @@
         ];
 
         const defaultRecords = [
-            { id: "1", date: "2026-07-01", time: "10:06:03", name: "Сугро", branch: "Офис 1", delay: 6, fine: 0, penalty: "Первое предупреждение", notes: "Сотрудник зафиксирован на рабочем месте в наушниках с чашкой.", evidence: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80" },
-            { id: "2", date: "2026-07-02", time: "10:13:42", name: "Мария", branch: "Склад 1", delay: 13, fine: 0, penalty: "Замечание", notes: "Зафиксирована у входа, изучает телефон при входе на склад.", evidence: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80" },
-            { id: "3", date: "2026-07-06", time: "10:17:48", name: "Сугро", branch: "Офис 1", delay: 14, fine: 0, penalty: "Повторно предупрежден", notes: "Второй инцидент за неделю. Проведена беседа о времени начала смены.", evidence: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=600&q=80" },
-            { id: "4", date: "2026-07-07", time: "10:20:46", name: "Мария", branch: "Офис для Менеджмента", delay: 20, fine: 0, penalty: "Замечание", notes: "Зафиксирована входящей в кабинет управления менеджмента.", evidence: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80" },
-            { id: "5", date: "2026-07-07", time: "10:26:00", name: "Сугро", branch: "Офис 1", delay: 26, fine: 0, penalty: "Систематически / Депремирование", notes: "Третий факт опоздания за месяц. Рапорт отправлен руководству.", evidence: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80" },
-            { id: "6", date: "2026-07-08", time: "09:31:14", name: "Хайдар", branch: "Ц5", delay: 30, fine: 100, penalty: "100% штраф по регламенту касс", notes: "Грубое опоздание на открытие кассовой смены, касса №3.", evidence: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80" }
+            { id: "1", date: "2026-07-01", time: "10:06:03", name: "Сугро", branch: "Офис 1", type: "lateness", delay: 6, fine: 0, penalty: "Первое предупреждение", notes: "Сотрудник зафиксирован на рабочем месте в наушниках с чашкой.", evidence: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80" },
+            { id: "2", date: "2026-07-02", time: "10:13:42", name: "Мария", branch: "Склад 1", type: "discipline", delay: 0, fine: 0, penalty: "Замечание", notes: "Зафиксирована у входа, изучает телефон при входе на склад.", evidence: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80" },
+            { id: "3", date: "2026-07-06", time: "10:17:48", name: "Сугро", branch: "Офис 1", type: "lateness", delay: 14, fine: 0, penalty: "Повторно предупрежден", notes: "Второй инцидент за неделю. Проведена беседа о времени начала смены.", evidence: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=600&q=80" },
+            { id: "4", date: "2026-07-07", time: "10:20:46", name: "Мария", branch: "Офис для Менеджмента", type: "dress_code", delay: 0, fine: 0, penalty: "Замечание", notes: "Зафиксирована входящей в кабинет управления менеджмента без формы.", evidence: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80" },
+            { id: "5", date: "2026-07-07", time: "10:26:00", name: "Сугро", branch: "Офис 1", type: "lateness", delay: 26, fine: 0, penalty: "Систематически / Депремирование", notes: "Третий факт опоздания за месяц. Рапорт отправлен руководству.", evidence: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80" },
+            { id: "6", date: "2026-07-08", time: "09:31:14", name: "Хайдар", branch: "Ц5", type: "lateness", delay: 30, fine: 100, penalty: "100% штраф по регламенту касс", notes: "Грубое опоздание на открытие кассовой смены, касса №3.", evidence: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80" }
         ];
 
-        let branches = JSON.parse(localStorage.getItem('tb_branches')) || defaultBranches;
-        let records = JSON.parse(localStorage.getItem('tb_records')) || defaultRecords;
+        const typeLabels = {
+            'lateness': 'Опоздание',
+            'dress_code': 'Дресс-код',
+            'discipline': 'Дисциплина',
+            'negligence': 'Халатность',
+            'theft': 'Кража',
+            'damage': 'Порча имущества',
+            'rudeness': 'Грубость',
+            'absence': 'Прогул',
+            'other': 'Другое'
+        };
 
+        const typeBadgeColors = {
+            'lateness': 'bg-amber-950/50 text-amber-400 border-amber-800/50',
+            'dress_code': 'bg-pink-950/50 text-pink-400 border-pink-800/50',
+            'discipline': 'bg-purple-950/50 text-purple-400 border-purple-800/50',
+            'negligence': 'bg-yellow-950/50 text-yellow-400 border-yellow-800/50',
+            'theft': 'bg-red-950/60 text-red-400 border-red-800/50 font-bold',
+            'damage': 'bg-rose-950/50 text-rose-400 border-rose-800/50',
+            'rudeness': 'bg-orange-950/50 text-orange-400 border-orange-800/50',
+            'absence': 'bg-blue-950/50 text-blue-400 border-blue-800/50',
+            'other': 'bg-slate-800 text-slate-350 border-slate-700'
+        };
+
+        let branches = [];
+        let records = [];
         let currentRole = null;
         let branchChartInstance = null;
         let employeeChartInstance = null;
+        let recordToDeleteId = null;
+
+        // Инициализация сервисов Firebase
+        let app = null;
+        let db = null;
+        let auth = null;
+        let unsubscribeRecords = null;
+        let unsubscribeBranches = null;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mazzali-control';
+
+        async function initFirebase() {
+            const statusDot = document.getElementById('dbStatusDot');
+            const statusText = document.getElementById('dbStatusText');
+
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+            statusText.innerText = "Firebase: Подключение...";
+
+            try {
+                app = initializeApp(hardcodedFirebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Выполняем анонимную авторизацию
+                let user;
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                    user = cred.user;
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    user = cred.user;
+                }
+
+                if (user) {
+                    statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                    statusText.innerText = "Firebase: Подключено";
+                    setupRealtimeSync();
+                }
+            } catch (error) {
+                console.error("Firebase init error: ", error);
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse";
+                
+                // Делаем диагностику более точной для пользователя
+                const errorCode = error.code || '';
+                const errorMsg = error.message || '';
+                
+                if (errorCode === 'auth/operation-not-allowed' || errorMsg.includes('anonymous')) {
+                    statusText.innerText = "Firebase: Включите Anonymous в Auth";
+                } else if (errorCode === 'permission-denied' || errorMsg.includes('permission')) {
+                    statusText.innerText = "Firebase: Доступ заблокирован (Rules)";
+                } else if (errorMsg.includes('Failed to get document') || errorMsg.includes('Could not reach Cloud Firestore')) {
+                    statusText.innerText = "Firebase: Ошибка сети / Офлайн";
+                } else {
+                    // Пишем короткое название ошибки
+                    statusText.innerText = `Firebase: Ошибка (${errorCode || 'No DB / Rules'})`;
+                }
+                
+                showToast("Ошибка подключения к облаку: " + error.message, "error");
+                
+                // Загружаем резервные локальные данные, чтобы сайт работал даже без сети
+                branches = JSON.parse(localStorage.getItem('tb_branches')) || defaultBranches;
+                records = JSON.parse(localStorage.getItem('tb_records')) || defaultRecords;
+                populateFilters();
+                renderTable();
+            }
+        }
+
+        function setupRealtimeSync() {
+            if (!db || !auth.currentUser) return;
+
+            const recordsCollection = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+            const branchesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'branches');
+
+            // Отписываемся от старых слушателей, если они были
+            if (unsubscribeRecords) unsubscribeRecords();
+            if (unsubscribeBranches) unsubscribeBranches();
+
+            // Живая синхронизация филиалов
+            unsubscribeBranches = onSnapshot(branchesCollection, async (snapshot) => {
+                let tempBranches = [];
+                snapshot.forEach(doc => {
+                    tempBranches.push(doc.data().name);
+                });
+
+                if (tempBranches.length === 0) {
+                    // База данных пуста при первом запуске — загружаем дефолтные филиалы
+                    showToast("Первичная настройка филиалов в облаке...", "info");
+                    for (const b of defaultBranches) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'branches', b), { name: b });
+                    }
+                } else {
+                    branches = tempBranches;
+                    populateFilters();
+                    renderTable();
+                }
+            }, (error) => {
+                console.error("Sync branches error: ", error);
+                const statusText = document.getElementById('dbStatusText');
+                const statusDot = document.getElementById('dbStatusDot');
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse";
+                statusText.innerText = "Firestore: Ошибка (Проверьте Firestore Database в консоли)";
+            });
+
+            // Живая синхронизация фиксаций нарушений
+            unsubscribeRecords = onSnapshot(recordsCollection, async (snapshot) => {
+                let tempRecords = [];
+                snapshot.forEach(doc => {
+                    tempRecords.push(doc.data());
+                });
+
+                if (tempRecords.length === 0 && records.length === 0) {
+                    // База данных пуста — загружаем дефолтный архив фиксаций
+                    showToast("Первичное заполнение журнала в облаке...", "info");
+                    for (const r of defaultRecords) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', r.id), r);
+                    }
+                } else {
+                    records = tempRecords;
+                    renderTable();
+                }
+            }, (error) => {
+                console.error("Sync records error: ", error);
+                const statusText = document.getElementById('dbStatusText');
+                const statusDot = document.getElementById('dbStatusDot');
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse";
+                statusText.innerText = "Firestore: Ошибка (Создайте Cloud Firestore в консоли)";
+            });
+        }
 
         window.onload = function() {
-            // Инициализация Telegram Mini App
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
-                tg.expand(); // Разворачиваем на весь экран
+                tg.expand();
             }
 
             const savedRole = localStorage.getItem('tb_saved_role');
             if (savedRole) { 
                 applyRole(savedRole); 
             }
-        }
+
+            // Инициализируем Firebase
+            initFirebase();
+        };
 
         // Авторизация
-        function handleLogin(e) {
+        window.handleLogin = function(e) {
             e.preventDefault();
             const errorDiv = document.getElementById('loginError');
             const passwordInput = document.getElementById('loginPassword').value.trim().toLowerCase();
@@ -443,14 +656,14 @@
                 errorDiv.innerText = "Ошибка: неверный пароль. Попробуйте сменить раскладку на английский язык.";
                 errorDiv.classList.remove('hidden');
             }
-        }
+        };
 
-        function loginAsGuest() { 
+        window.loginAsGuest = function() { 
             applyRole('guest'); 
             showToast("Вход выполнен как Гость (режим просмотра)", "info");
-        }
+        };
 
-        function applyRole(role) {
+        window.applyRole = function(role) {
             currentRole = role;
             localStorage.setItem('tb_saved_role', role);
             document.getElementById('loginScreen').style.display = 'none';
@@ -471,27 +684,27 @@
 
             populateFilters();
             renderTable();
-            renderCharts();
-        }
+        };
 
-        function handleLogout() {
+        window.handleLogout = function() {
             currentRole = null;
             localStorage.removeItem('tb_saved_role');
             document.getElementById('loginPassword').value = '';
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('mainApp').style.display = 'none';
             showToast("Сессия закрыта", "info");
-        }
+        };
 
-        // Заполнение выпадающих списков филиалов с принудительным цветом
-        function populateFilters() {
+        // Заполнение выпадающих списков филиалов
+        window.populateFilters = function() {
             const fBranch = document.getElementById('filterBranch');
             const rBranch = document.getElementById('recBranch');
             fBranch.innerHTML = '<option value="all" style="background-color: #ffffff; color: #0f172a; font-weight: bold;">Все филиалы</option>';
             rBranch.innerHTML = '';
             
             // Сортировка филиалов по алфавиту
-            branches.sort((a,b) => a.localeCompare(b)).forEach(b => {
+            const sortedBranches = [...branches].sort((a,b) => a.localeCompare(b));
+            sortedBranches.forEach(b => {
                 const opt1 = document.createElement('option');
                 opt1.value = b;
                 opt1.innerText = b;
@@ -508,16 +721,29 @@
                 opt2.style.fontWeight = "bold";
                 rBranch.appendChild(opt2);
             });
-        }
+        };
 
-        // Улучшение: Быстрые кнопки шаблонов
-        function setQuickPenalty(text, val) {
+        window.setQuickPenalty = function(text, val) {
             document.getElementById('recPenalty').value = text;
             document.getElementById('recFine').value = val;
-        }
+        };
 
-        // Отрисовка таблицы с учетом фильтров по датам
-        function renderTable() {
+        window.toggleLatenessInput = function() {
+            const type = document.getElementById('recType').value;
+            const delayContainer = document.getElementById('recDelayContainer');
+            const recDelay = document.getElementById('recDelay');
+            
+            if (type === 'lateness') {
+                delayContainer.style.display = 'block';
+                recDelay.setAttribute('required', 'true');
+            } else {
+                delayContainer.style.display = 'none';
+                recDelay.removeAttribute('required');
+                recDelay.value = "0"; // Не влияет на статистику дресс-кодов и других нарушений
+            }
+        };
+
+        window.renderTable = function() {
             const tbody = document.getElementById('tableBody');
             const emptyState = document.getElementById('emptyState');
             const search = document.getElementById('filterSearch').value.toLowerCase();
@@ -528,10 +754,11 @@
 
             tbody.innerHTML = '';
 
+            // Сортировка записей в JavaScript, последние добавленные сверху
             const sorted = [...records].sort((a,b) => b.id.toString().localeCompare(a.id.toString()));
 
             const filtered = sorted.filter(r => {
-                const matchesSearch = r.name.toLowerCase().includes(search);
+                const matchesSearch = (r.name || '').toLowerCase().includes(search);
                 const matchesBranch = (branch === 'all' || r.branch === branch);
                 
                 // Фильтр по дате
@@ -549,6 +776,15 @@
                 emptyState.classList.add('hidden');
                 filtered.forEach(r => {
                     const formattedDate = formatRussianDate(r.date);
+                    const typeLabel = typeLabels[r.type || 'lateness'] || 'Нарушение';
+                    const typeColorClass = typeBadgeColors[r.type || 'lateness'] || 'bg-slate-800 text-slate-350 border-slate-700';
+                    const delayValue = parseInt(r.delay || 0);
+
+                    // Если тип нарушения - опоздание, показываем минуты, иначе только лейбл нарушения
+                    const detailsCell = (r.type === 'lateness' || !r.type) 
+                        ? `<span class="px-2.5 py-1 rounded-full text-xs font-bold ${typeColorClass}">${typeLabel}: ${delayValue} мин</span>`
+                        : `<span class="px-2.5 py-1 rounded-full text-xs font-bold ${typeColorClass}">${typeLabel}</span>`;
+
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-800/40 transition cursor-pointer" onclick="viewIncident('${r.id}')">
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -559,15 +795,13 @@
                             <td class="px-6 py-4 font-bold text-white whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div class="h-7 w-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[10px] uppercase border border-slate-700">
-                                        ${r.name.substring(0, 2)}
+                                        ${(r.name || '??').substring(0, 2)}
                                     </div>
                                     <span class="ml-2">${r.name}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center whitespace-nowrap">
-                                <span class="px-2 py-1 rounded-full text-xs font-bold ${r.delay >= 25 ? 'bg-rose-950/70 text-rose-400 border border-rose-800/50' : 'bg-amber-950/50 text-amber-400 border border-amber-800/50'}">
-                                    ${r.delay} мин
-                                </span>
+                                ${detailsCell}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 ${r.fine > 0 ? `<span class="text-amber-500 font-extrabold">${r.fine}% штраф</span>` : '<span class="text-slate-500">—</span>'}
@@ -607,14 +841,13 @@
 
             // Перерисовываем графики для динамического соответствия фильтрам
             updateDynamicCharts(filtered);
-        }
+        };
 
-        // Обновление диаграмм на основе текущего фильтра данных
         function updateDynamicCharts(filteredData) {
             const bMap = {}, eMap = {};
             filteredData.forEach(r => {
-                bMap[r.branch] = (bMap[r.branch] || 0) + parseInt(r.delay);
-                eMap[r.name] = (eMap[r.name] || 0) + parseInt(r.delay);
+                bMap[r.branch] = (bMap[r.branch] || 0) + parseInt(r.delay || 0);
+                eMap[r.name] = (eMap[r.name] || 0) + parseInt(r.delay || 0);
             });
 
             const sortedBranches = Object.entries(bMap).sort((a,b) => b[1] - a[1]).slice(0, 6);
@@ -671,12 +904,10 @@
             });
         }
 
-        // Построение дефолтных графиков
-        function renderCharts() {
+        window.renderCharts = function() {
             renderTable();
-        }
+        };
 
-        // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ КОНВЕРТАЦИИ ДАТЫ И ВРЕМЕНИ ДЛЯ INPUT-ПОЛЕЙ
         function parseToInputDate(dateStr) {
             if (!dateStr) return "";
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
@@ -711,8 +942,7 @@
             return dateStr;
         }
 
-        // ЭКСПОРТ БЭКАПА ДАННЫХ (JSON ФАЙЛ)
-        function exportBackup() {
+        window.exportBackup = function() {
             const dataStr = JSON.stringify({ branches, records });
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -721,26 +951,38 @@
             link.download = `mazzali_timecontrol_backup_${new Date().toISOString().split('T')[0]}.json`;
             link.click();
             showToast("Бэкап базы данных успешно сохранен на ПК!", "success");
-        }
+        };
 
-        // ИМПОРТ БЭКАПА ДАННЫХ
-        function importBackup(event) {
+        window.importBackup = async function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
                     if (data.branches && data.records) {
-                        branches = data.branches;
-                        records = data.records;
-                        localStorage.setItem('tb_branches', JSON.stringify(branches));
-                        localStorage.setItem('tb_records', JSON.stringify(records));
-                        populateFilters();
-                        renderTable();
-                        renderCharts();
-                        showToast("Резервная копия успешно загружена на ПК!", "success");
+                        // Сохраняем в облако, если база активна
+                        if (db && auth.currentUser) {
+                            showToast("Импорт резервной копии в облако...", "info");
+                            // Импортируем филиалы
+                            for (const b of data.branches) {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'branches', b), { name: b });
+                            }
+                            // Импортируем записи
+                            for (const r of data.records) {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', r.id), r);
+                            }
+                        } else {
+                            // Локальная песочница
+                            branches = data.branches;
+                            records = data.records;
+                            localStorage.setItem('tb_branches', JSON.stringify(branches));
+                            localStorage.setItem('tb_records', JSON.stringify(records));
+                            populateFilters();
+                            renderTable();
+                        }
+                        showToast("Резервная копия успешно восстановлена!", "success");
                     } else {
                         showToast("Неверный формат файла бэкапа!", "error");
                     }
@@ -749,15 +991,15 @@
                 }
             };
             reader.readAsText(file);
-        }
+        };
 
-        // ЭКСПОРТ В EXCEL (CSV)
-        function exportToExcel() {
-            let csvContent = "\uFEFF"; // BOM для правильной кодировки кириллицы в Excel
-            csvContent += "Дата;Время;Филиал;Сотрудник;Опоздание (мин);Штраф %;Решение\n";
+        window.exportToExcel = function() {
+            let csvContent = "\uFEFF"; 
+            csvContent += "Дата;Время;Филиал;Сотрудник;Вид нарушения;Опоздание (мин);Штраф %;Решение\n";
 
             records.forEach(r => {
-                csvContent += `${formatRussianDate(r.date)};${r.time};${r.branch};${r.name};${r.delay};${r.fine || 0};${r.penalty || "Фиксация"}\n`;
+                const typeLabel = typeLabels[r.type || 'lateness'] || 'Нарушение';
+                csvContent += `${formatRussianDate(r.date)};${r.time};${r.branch};${r.name};${typeLabel};${r.delay};${r.fine || 0};${r.penalty || "Фиксация"}\n`;
             });
 
             const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -767,28 +1009,27 @@
             link.download = `mazzali_discipline_report_${new Date().toISOString().split('T')[0]}.csv`;
             link.click();
             showToast("Файл отчета для Excel успешно скачан!", "success");
-        }
+        };
 
-        // КОПИРОВАНИЕ РАПОРТА ДЛЯ TELEGRAM (ЧИСТЫЙ ТЕКСТ БЕЗ ШУМА)
-        function copyToTelegram() {
+        window.copyToTelegram = function() {
             const id = document.getElementById('viewIncidentId').value;
             const r = records.find(x => x.id.toString() === id.toString());
             if (!r) return;
 
             const formattedDate = formatRussianDate(r.date);
             const formattedTime = r.time ? r.time.substring(0, 5) : "";
+            const typeLabel = typeLabels[r.type || 'lateness'] || 'Нарушение';
             
-            // Полностью чистый, аккуратный текст рапорта для отправки в один клик
-            const text = `⚠️ ОПАЗДАНИЕ СОТРУДНИКА\n\n` +
+            const text = `⚠️ ФИКСАЦИЯ НАРУШЕНИЯ\n\n` +
                          `Филиал: ${r.branch}\n` +
                          `Сотрудник: ${r.name}\n` +
+                         `Вид нарушения: ${typeLabel}\n` +
                          `Дата и время: ${formattedDate} в ${formattedTime}\n\n` +
-                         `Время опоздания: ${r.delay} мин\n` +
+                         `${r.type === 'lateness' || !r.type ? `Время опоздания: ${r.delay} мин\n` : ''}` +
                          `Размер штрафа: ${r.fine > 0 ? r.fine + '%' : 'Нет'}\n` +
                          `Решение: ${r.penalty || 'Зарегистрировано системой'}\n\n` +
                          `Комментарий: ${r.notes || 'Без примечаний.'}`;
 
-            // Копирование в буфер обмена
             const el = document.createElement('textarea');
             el.value = text;
             document.body.appendChild(el);
@@ -797,15 +1038,15 @@
             document.body.removeChild(el);
 
             showToast("📱 Рапорт скопирован! Теперь просто нажмите Ctrl+V в Telegram.", "success");
-        }
+        };
 
-        // МОДАЛКА: ОТКРЫТИЕ НА ДОБАВЛЕНИЕ
-        function openAddRecordModal() {
-            document.getElementById('modalRecordTitle').innerText = "Добавить новую фиксацию опоздания";
+        window.openAddRecordModal = function() {
+            document.getElementById('modalRecordTitle').innerText = "Добавить новую фиксацию нарушения";
             document.getElementById('recordId').value = "";
             document.getElementById('recDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('recTime').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
             document.getElementById('recName').value = "";
+            document.getElementById('recType').value = "lateness";
             document.getElementById('recDelay').value = "";
             document.getElementById('recFine').value = "";
             document.getElementById('recPenalty').value = "";
@@ -814,32 +1055,32 @@
             document.getElementById('recEvidenceUrl').value = "";
             document.getElementById('fileStatus').innerText = "Файл не выбран";
             updateEvidencePreview("");
+            toggleLatenessInput();
 
             document.getElementById('modalRecord').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-        }
+        };
 
-        function closeRecordModal() { 
+        window.closeRecordModal = function() { 
             document.getElementById('modalRecord').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4"; 
-        }
+        };
         
-        function openAddBranchModal() { 
+        window.openAddBranchModal = function() { 
             document.getElementById('newBranchName').value = "";
             document.getElementById('modalBranch').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"; 
-        }
+        };
 
-        function closeBranchModal() { 
+        window.closeBranchModal = function() { 
             document.getElementById('modalBranch').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4"; 
-        }
+        };
 
-        // РЕДАКТИРОВАНИЕ СТАРОГО НАРУШЕНИЯ
-        function editRecord(id) {
+        window.editRecord = function(id) {
             const r = records.find(x => x.id.toString() === id.toString());
             if (!r) {
-                showToast("Ошибка: Запись не найдена в базе ПК!", "error");
+                showToast("Ошибка: Запись не найдена в базе!", "error");
                 return;
             }
 
-            document.getElementById('modalRecordTitle').innerText = "Редактировать фиксацию опоздания";
+            document.getElementById('modalRecordTitle').innerText = "Редактировать фиксацию нарушения";
             document.getElementById('recordId').value = r.id;
 
             document.getElementById('recDate').value = parseToInputDate(r.date);
@@ -847,7 +1088,8 @@
             
             document.getElementById('recName').value = r.name || "";
             document.getElementById('recBranch').value = r.branch || "";
-            document.getElementById('recDelay').value = r.delay || "";
+            document.getElementById('recType').value = r.type || "lateness";
+            document.getElementById('recDelay').value = r.delay || "0";
             document.getElementById('recFine').value = (r.fine !== undefined && r.fine !== null) ? r.fine : "";
             document.getElementById('recPenalty').value = r.penalty || "";
             document.getElementById('recNotes').value = r.notes || "";
@@ -862,19 +1104,20 @@
 
             document.getElementById('fileStatus').innerText = r.evidence ? "Медиафайл загружен" : "Нет медиафайла";
             updateEvidencePreview(r.evidence);
+            toggleLatenessInput();
 
             document.getElementById('modalRecord').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-        }
+        };
 
-        // СОХРАНЕНИЕ / ИЗМЕНЕНИЕ ЗАПИСИ
-        function saveRecord(e) {
+        window.saveRecord = async function(e) {
             e.preventDefault();
             const id = document.getElementById('recordId').value;
             const date = document.getElementById('recDate').value;
             const time = document.getElementById('recTime').value;
             const name = document.getElementById('recName').value.trim();
             const branch = document.getElementById('recBranch').value;
-            const delay = parseInt(document.getElementById('recDelay').value);
+            const type = document.getElementById('recType').value;
+            const delay = parseInt(document.getElementById('recDelay').value) || 0;
             const fine = parseInt(document.getElementById('recFine').value) || 0;
             const penalty = document.getElementById('recPenalty').value.trim();
             const notes = document.getElementById('recNotes').value.trim();
@@ -888,77 +1131,133 @@
                 evidence = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=600&q=80";
             }
 
-            if (id) {
-                const idx = records.findIndex(r => r.id.toString() === id.toString());
-                if (idx !== -1) {
-                    records[idx] = { id: id.toString(), date, time, name, branch, delay, fine, penalty, notes, evidence };
-                    showToast("Фиксация успешно изменена!", "success");
+            const recordId = id || Date.now().toString();
+            const recordData = { id: recordId, date, time, name, branch, type, delay, fine, penalty, notes, evidence };
+
+            if (db && auth.currentUser) {
+                showToast("Сохранение в облако...", "info");
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', recordId), recordData);
+                    showToast("Фиксация успешно синхронизирована!", "success");
+                } catch (error) {
+                    showToast("Ошибка сохранения в Firebase: " + error.message, "error");
                 }
             } else {
-                const newRec = {
-                    id: Date.now().toString(),
-                    date, time, name, branch, delay, fine, penalty, notes, evidence
-                };
-                records.push(newRec);
-                showToast("Новая фиксация добавлена!", "success");
+                if (id) {
+                    const idx = records.findIndex(r => r.id.toString() === id.toString());
+                    if (idx !== -1) records[idx] = recordData;
+                } else {
+                    records.push(recordData);
+                }
+                localStorage.setItem('tb_records', JSON.stringify(records));
+                renderTable();
+                showToast("Сохранено локально!", "success");
             }
 
-            localStorage.setItem('tb_records', JSON.stringify(records));
             closeRecordModal();
-            renderTable();
-        }
+        };
 
-        // Удаление
-        function deleteRecord(id) {
-            if(!confirm("Вы уверены, что хотите навсегда удалить эту фиксацию?")) return;
-            records = records.filter(r => r.id.toString() !== id.toString());
-            localStorage.setItem('tb_records', JSON.stringify(records));
-            renderTable();
-            showToast("Запись нарушения удалена", "info");
-        }
+        window.deleteRecord = function(id) {
+            recordToDeleteId = id;
+            document.getElementById('modalConfirmDelete').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4";
+        };
 
-        // Добавление нового филиала
-        function saveNewBranch() {
+        window.closeConfirmDeleteModal = function() {
+            recordToDeleteId = null;
+            document.getElementById('modalConfirmDelete').className = "fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4";
+        };
+
+        window.executeDeleteRecord = async function() {
+            if (!recordToDeleteId) return;
+            const id = recordToDeleteId;
+            closeConfirmDeleteModal();
+
+            if (db && auth.currentUser) {
+                showToast("Удаление из облака...", "info");
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id.toString()));
+                    showToast("Запись успешно удалена из базы!", "success");
+                } catch (error) {
+                    showToast("Ошибка удаления из Firebase: " + error.message, "error");
+                }
+            } else {
+                records = records.filter(r => r.id.toString() !== id.toString());
+                localStorage.setItem('tb_records', JSON.stringify(records));
+                renderTable();
+                showToast("Удалено локально", "info");
+            }
+        };
+
+        window.saveNewBranch = async function() {
             const name = document.getElementById('newBranchName').value.trim();
             if(!name) return;
             if(branches.includes(name)) {
                 showToast("Этот филиал уже есть в списке!", "error");
                 return;
             }
-            branches.push(name);
-            localStorage.setItem('tb_branches', JSON.stringify(branches));
-            populateFilters();
-            closeBranchModal();
-            showToast(`Филиал "${name}" успешно создан!`, "success");
-        }
 
-        // Загрузка фото/видео в Base64
-        function handleFileSelect(event) {
+            if (db && auth.currentUser) {
+                showToast("Добавление филиала в облако...", "info");
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'branches', name), { name });
+                    showToast(`Филиал "${name}" успешно синхронизирован!`, "success");
+                } catch (error) {
+                    showToast("Ошибка сохранения в Firebase: " + error.message, "error");
+                }
+            } else {
+                branches.push(name);
+                localStorage.setItem('tb_branches', JSON.stringify(branches));
+                populateFilters();
+                showToast(`Филиал "${name}" успешно создан локально!`, "success");
+            }
+            closeBranchModal();
+        };
+
+        window.handleFileSelect = function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            document.getElementById('fileStatus').innerText = file.name;
+            document.getElementById('fileStatus').innerText = "Обработка...";
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const base64Data = e.target.result;
-                document.getElementById('recEvidenceData').value = base64Data;
-                document.getElementById('recEvidenceUrl').value = "";
-                updateEvidencePreview(base64Data);
-            }
+                const img = new Image();
+                img.onload = function() {
+                    // Сжимаем изображения для экономии лимитов Firestore
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxW = 400;
+                    const scale = maxW / img.width;
+                    
+                    if (img.width > maxW) {
+                        canvas.width = maxW;
+                        canvas.height = img.height * scale;
+                    } else {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                    }
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const compressedData = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    document.getElementById('recEvidenceData').value = compressedData;
+                    document.getElementById('recEvidenceUrl').value = "";
+                    document.getElementById('fileStatus').innerText = "Готово (Сжато)";
+                    updateEvidencePreview(compressedData);
+                };
+                img.src = e.target.result;
+            };
             reader.readAsDataURL(file);
-        }
+        };
 
-        // Ввод прямой ссылки на фото
-        function handleUrlInput(val) {
+        window.handleUrlInput = function(val) {
             if(val.trim().startsWith('http')) {
                 document.getElementById('recEvidenceData').value = "";
                 updateEvidencePreview(val.trim());
             }
-        }
+        };
 
-        // Превью фото
-        function updateEvidencePreview(src) {
+        window.updateEvidencePreview = function(src) {
             const previewDiv = document.getElementById('formEvidencePreview');
             previewDiv.innerHTML = '';
             if (src) {
@@ -969,20 +1268,23 @@
             } else {
                 previewDiv.innerHTML = '<span class="text-[10px] text-slate-600 text-center font-bold">Нет фото</span>';
             }
-        }
+        };
 
-        // ДЕТАЛЬНЫЙ ПРОСМОТР ИНЦИДЕНТА
-        function viewIncident(id) {
+        window.viewIncident = function(id) {
             const r = records.find(x => x.id.toString() === id.toString());
             if (!r) return;
 
-            document.getElementById('viewIncidentId').value = r.id; // сохраняем id для копирования
+            document.getElementById('viewIncidentId').value = r.id;
 
             document.getElementById('viewEmployee').innerText = r.name;
             document.getElementById('viewBranch').innerText = r.branch;
             document.getElementById('viewDate').innerText = formatRussianDate(r.date);
             document.getElementById('viewTime').innerText = r.time;
-            document.getElementById('viewDelay').innerText = r.delay + " минут";
+            
+            const typeLabel = typeLabels[r.type || 'lateness'] || 'Нарушение';
+            document.getElementById('viewType').innerText = typeLabel;
+            
+            document.getElementById('viewDelay').innerText = r.type === 'lateness' || !r.type ? r.delay + " минут" : "Не применимо";
             document.getElementById('viewFine').innerText = r.fine > 0 ? r.fine + "%" : "Не выставлен";
             document.getElementById('viewPenalty').innerText = r.penalty || "Зарегистрировано системой";
             document.getElementById('viewNotes').innerText = r.notes || "Примечания и подробности отсутствуют.";
@@ -1017,14 +1319,13 @@
             }
 
             document.getElementById('modalView').className = "fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center z-50 p-4";
-        }
+        };
 
-        function closeViewModal() {
+        window.closeViewModal = function() {
             document.getElementById('modalView').className = "fixed inset-0 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center z-50 p-4";
-        }
+        };
 
-        // ВСПОМОГАТЕЛЬНЫЕ TOASTS ОПОВЕЩЕНИЯ
-        function showToast(message, type = "success") {
+        window.showToast = function(message, type = "success") {
             const toast = document.createElement('div');
             toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl font-bold text-sm shadow-xl transition-all duration-300 transform translate-y-10 opacity-0`;
             
@@ -1047,7 +1348,7 @@
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
-        }
+        };
     </script>
 </body>
 </html>
